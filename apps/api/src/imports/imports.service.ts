@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -192,256 +192,359 @@ export class ImportsService {
     const payload = importJob.previewSummary as unknown as PreviewPayload;
     const overwriteExisting = dto.overwriteExisting ?? true;
 
-    return this.prisma.$transaction(async (tx) => {
-      let importedItems = 0;
-      let importedJournalRows = 0;
+    return this.prisma.$transaction(
+      async (tx) => {
+        let importedItems = 0;
+        let importedJournalRows = 0;
 
-      for (const row of payload.inventoryRows) {
-        const uom = await this.ensureUom(tx, row.uom);
-        const item = await this.ensureItem(tx, row.itemName, uom.id);
-        const existingInventory = await tx.inventoryItem.findUnique({
-          where: {
-            itemId_warehouseId: {
-              itemId: item.id,
-              warehouseId: warehouse.id,
-            },
-          },
+        // Caching maps to optimize execution speed
+        const uomCache = new Map<string, any>();
+        const itemCache = new Map<string, any>();
+        const projectCache = new Map<string, any>();
+        const inventoryCache = new Map<string, any>(); // itemId -> inventoryItem
+
+        // List of item media to batch insert
+        const itemMediaToInsert: any[] = [];
+
+        // 1. Pre-fetch UOMs
+        const uomCodes = Array.from(
+          new Set([
+            ...payload.inventoryRows.map((r) => r.uom.trim().toUpperCase()),
+            'CÁI',
+          ]),
+        );
+        const existingUoms = await tx.uom.findMany({
+          where: { code: { in: uomCodes } },
         });
-
-        if (existingInventory && !overwriteExisting) {
-          continue;
+        for (const u of existingUoms) {
+          uomCache.set(u.code, u);
         }
 
-        const minQty = existingInventory?.minQty ?? 5;
-        const status = getInventoryStatus(row.currentQty, minQty);
-
-        if (existingInventory) {
-          await tx.inventoryItem.update({
-            where: { id: existingInventory.id },
-            data: {
-              openingQty: row.openingQty,
-              totalInQty: row.totalInQty,
-              totalOutQty: row.totalOutQty,
-              currentQty: row.currentQty,
-              legacyStatus: row.legacyStatus,
-              minQty,
-              status,
-              lastMovementAt: new Date(),
-            },
-          });
-        } else {
-          await tx.inventoryItem.create({
-            data: {
-              itemId: item.id,
-              warehouseId: warehouse.id,
-              openingQty: row.openingQty,
-              totalInQty: row.totalInQty,
-              totalOutQty: row.totalOutQty,
-              currentQty: row.currentQty,
-              legacyStatus: row.legacyStatus,
-              minQty,
-              status,
-              lastMovementAt: new Date(),
-            },
-          });
+        // 2. Pre-fetch Items
+        const itemNames = Array.from(
+          new Set([
+            ...payload.inventoryRows.map((r) => r.itemName.trim()),
+            ...payload.journalRows.map((r) => r.itemName.trim()),
+          ]),
+        );
+        const existingItems = await tx.item.findMany({
+          where: { name: { in: itemNames } },
+        });
+        for (const item of existingItems) {
+          const cacheKey = `${item.name.toLowerCase()}_${item.defaultUomId}`;
+          itemCache.set(cacheKey, item);
         }
 
-        for (const image of row.images) {
-          await tx.itemMedia.create({
-            data: {
+        // 3. Pre-fetch Projects
+        const projectNames = Array.from(
+          new Set(
+            payload.journalRows
+              .map((r) => r.projectName)
+              .filter(Boolean) as string[],
+          ),
+        );
+        if (projectNames.length > 0) {
+          const existingProjects = await tx.project.findMany({
+            where: {
+              OR: [
+                { name: { in: projectNames } },
+                {
+                  code: {
+                    in: projectNames.map((p) =>
+                      this.slugify(p),
+                    ),
+                  },
+                },
+              ],
+            },
+          });
+          for (const p of existingProjects) {
+            projectCache.set(p.name.toLowerCase(), p);
+            projectCache.set(p.code.toLowerCase(), p);
+          }
+        }
+
+        // 4. Pre-fetch Inventory Items for this warehouse
+        const existingInventoryList = await tx.inventoryItem.findMany({
+          where: { warehouseId: warehouse.id },
+        });
+        for (const inv of existingInventoryList) {
+          inventoryCache.set(inv.itemId, inv);
+        }
+
+        for (const row of payload.inventoryRows) {
+          const uom = await this.ensureUom(tx, row.uom, uomCache);
+          const item = await this.ensureItem(tx, row.itemName, uom.id, itemCache);
+          const existingInventory = inventoryCache.get(item.id);
+
+          if (existingInventory && !overwriteExisting) {
+            continue;
+          }
+
+          const minQty = existingInventory?.minQty ?? 5;
+          const status = getInventoryStatus(row.currentQty, minQty);
+
+          if (existingInventory) {
+            await tx.inventoryItem.update({
+              where: { id: existingInventory.id },
+              data: {
+                openingQty: row.openingQty,
+                totalInQty: row.totalInQty,
+                totalOutQty: row.totalOutQty,
+                currentQty: row.currentQty,
+                legacyStatus: row.legacyStatus,
+                minQty,
+                status,
+                lastMovementAt: new Date(),
+              },
+            });
+          } else {
+            const newInv = await tx.inventoryItem.create({
+              data: {
+                itemId: item.id,
+                warehouseId: warehouse.id,
+                openingQty: row.openingQty,
+                totalInQty: row.totalInQty,
+                totalOutQty: row.totalOutQty,
+                currentQty: row.currentQty,
+                legacyStatus: row.legacyStatus,
+                minQty,
+                status,
+                lastMovementAt: new Date(),
+              },
+            });
+            inventoryCache.set(item.id, newInv);
+          }
+
+          for (const image of row.images) {
+            itemMediaToInsert.push({
               itemId: item.id,
               uploadedById: user.id,
               storageKey: image.storageKey,
               fileName: image.fileName,
               mimeType: image.mimeType,
               size: image.size,
-            },
+            });
+          }
+
+          importedItems += 1;
+        }
+
+        // Batch insert ItemMedia
+        if (itemMediaToInsert.length > 0) {
+          await tx.itemMedia.createMany({
+            data: itemMediaToInsert,
           });
         }
 
-        importedItems += 1;
-      }
+        for (const row of payload.journalRows) {
+          const defaultUom = await this.ensureUom(tx, 'CÁI', uomCache);
+          const item = await this.ensureItem(tx, row.itemName, defaultUom.id, itemCache);
+          let inventoryItem = inventoryCache.get(item.id);
 
-      for (const row of payload.journalRows) {
-        const defaultUom = await this.ensureUom(tx, 'CÁI');
-        const item = await this.ensureItem(tx, row.itemName, defaultUom.id);
-        let inventoryItem = await tx.inventoryItem.findUnique({
-          where: {
-            itemId_warehouseId: {
-              itemId: item.id,
-              warehouseId: warehouse.id,
-            },
-          },
-        });
+          if (!inventoryItem) {
+            inventoryItem = await tx.inventoryItem.create({
+              data: {
+                itemId: item.id,
+                warehouseId: warehouse.id,
+                openingQty: 0,
+                totalInQty: 0,
+                totalOutQty: 0,
+                currentQty: 0,
+                minQty: 5,
+                status: InventoryStatus.OUT_OF_STOCK,
+              },
+            });
+            inventoryCache.set(item.id, inventoryItem);
+          }
 
-        if (!inventoryItem) {
-          inventoryItem = await tx.inventoryItem.create({
+          const project = row.projectName
+            ? await this.ensureProject(
+                tx,
+                row.projectName,
+                warehouse.unitId,
+                projectCache,
+              )
+            : null;
+
+          const transaction = await tx.inventoryTransaction.create({
             data: {
+              inventoryItemId: inventoryItem.id,
               itemId: item.id,
               warehouseId: warehouse.id,
-              openingQty: 0,
-              totalInQty: 0,
-              totalOutQty: 0,
-              currentQty: 0,
-              minQty: 5,
-              status: InventoryStatus.OUT_OF_STOCK,
+              unitId: warehouse.unitId,
+              projectId: project?.id,
+              createdById: user.id,
+              type: TransactionType.IN,
+              quantity: 0,
+              quantityBefore: inventoryItem.currentQty,
+              quantityAfter: inventoryItem.currentQty,
+              note: 'Import nhật ký legacy (chỉ tham chiếu)',
+              metadata: {
+                source: 'legacy_journal',
+                referenceOnly: true,
+                legacyDate: row.date,
+                importedRow: row.rowNumber,
+              } as never,
+              legacyImported: true,
+              createdAt: row.date ? new Date(row.date) : new Date(),
             },
           });
+
+          for (const photo of row.photos) {
+            await tx.transactionAttachment.create({
+              data: {
+                transactionId: transaction.id,
+                kind: AttachmentKind.PHOTO,
+                storageKey: photo.storageKey,
+                fileName: photo.fileName,
+                mimeType: photo.mimeType,
+                size: photo.size,
+              },
+            });
+          }
+
+          for (const invoice of row.invoices) {
+            await tx.transactionAttachment.create({
+              data: {
+                transactionId: transaction.id,
+                kind: AttachmentKind.INVOICE,
+                storageKey: invoice.storageKey,
+                fileName: invoice.fileName,
+                mimeType: invoice.mimeType,
+                size: invoice.size,
+              },
+            });
+          }
+
+          importedJournalRows += 1;
         }
 
-        const project = row.projectName
-          ? await this.ensureProject(tx, row.projectName, warehouse.unitId)
-          : null;
-
-        const transaction = await tx.inventoryTransaction.create({
+        await tx.importJob.update({
+          where: { id: importJob.id },
           data: {
-            inventoryItemId: inventoryItem.id,
-            itemId: item.id,
-            warehouseId: warehouse.id,
-            unitId: warehouse.unitId,
-            projectId: project?.id,
-            createdById: user.id,
-            type: TransactionType.IN,
-            quantity: 0,
-            quantityBefore: inventoryItem.currentQty,
-            quantityAfter: inventoryItem.currentQty,
-            note: 'Import nhật ký legacy (chỉ tham chiếu)',
-            metadata: {
-              source: 'legacy_journal',
-              referenceOnly: true,
-              legacyDate: row.date,
-              importedRow: row.rowNumber,
-            } as never,
-            legacyImported: true,
-            createdAt: row.date ? new Date(row.date) : new Date(),
+            status: ImportJobStatus.COMMITTED,
+            committedAt: new Date(),
           },
         });
 
-        for (const photo of row.photos) {
-          await tx.transactionAttachment.create({
-            data: {
-              transactionId: transaction.id,
-              kind: AttachmentKind.PHOTO,
-              storageKey: photo.storageKey,
-              fileName: photo.fileName,
-              mimeType: photo.mimeType,
-              size: photo.size,
-            },
-          });
-        }
+        await tx.auditLog.create({
+          data: {
+            actorId: user.id,
+            action: 'IMPORT_COMMIT',
+            entityType: 'import_jobs',
+            entityId: importJob.id,
+            metadata: {
+              warehouseId: warehouse.id,
+              importedItems,
+              importedJournalRows,
+            } as never,
+          },
+        });
 
-        for (const invoice of row.invoices) {
-          await tx.transactionAttachment.create({
-            data: {
-              transactionId: transaction.id,
-              kind: AttachmentKind.INVOICE,
-              storageKey: invoice.storageKey,
-              fileName: invoice.fileName,
-              mimeType: invoice.mimeType,
-              size: invoice.size,
-            },
-          });
-        }
-
-        importedJournalRows += 1;
-      }
-
-      await tx.importJob.update({
-        where: { id: importJob.id },
-        data: {
-          status: ImportJobStatus.COMMITTED,
-          committedAt: new Date(),
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorId: user.id,
-          action: 'IMPORT_COMMIT',
-          entityType: 'import_jobs',
-          entityId: importJob.id,
-          metadata: {
-            warehouseId: warehouse.id,
-            importedItems,
-            importedJournalRows,
-          } as never,
-        },
-      });
-
-      return {
-        jobId: importJob.id,
-        importedItems,
-        importedJournalRows,
-      };
-    });
+        return {
+          jobId: importJob.id,
+          importedItems,
+          importedJournalRows,
+        };
+      },
+      {
+        maxWait: 60000,
+        timeout: 240000, // 4 minutes
+      },
+    );
   }
 
-  private async ensureUom(tx: Prisma.TransactionClient, rawCode: string) {
+  private async ensureUom(
+    tx: Prisma.TransactionClient,
+    rawCode: string,
+    cache?: Map<string, any>,
+  ) {
     const code = rawCode.trim().toUpperCase();
+    if (cache?.has(code)) {
+      return cache.get(code);
+    }
     const existing = await tx.uom.findUnique({
       where: { code },
     });
 
-    if (existing) {
-      return existing;
-    }
+    const result =
+      existing ||
+      (await tx.uom.create({
+        data: {
+          code,
+          name: code,
+        },
+      }));
 
-    return tx.uom.create({
-      data: {
-        code,
-        name: code,
-      },
-    });
+    cache?.set(code, result);
+    return result;
   }
 
   private async ensureItem(
     tx: Prisma.TransactionClient,
     itemName: string,
     uomId: string,
+    cache?: Map<string, any>,
   ) {
-    const existing = await tx.item.findFirst({
-      where: {
-        name: itemName.trim(),
-        defaultUomId: uomId,
-      },
-    });
-
-    if (existing) {
-      return existing;
+    const trimmed = itemName.trim();
+    const cacheKey = `${trimmed.toLowerCase()}_${uomId}`;
+    if (cache?.has(cacheKey)) {
+      return cache.get(cacheKey);
     }
 
-    return tx.item.create({
-      data: {
-        name: itemName.trim(),
-        sku: this.generateSku(itemName),
+    const existing = await tx.item.findFirst({
+      where: {
+        name: trimmed,
         defaultUomId: uomId,
       },
     });
+
+    const result =
+      existing ||
+      (await tx.item.create({
+        data: {
+          name: trimmed,
+          sku: this.generateSku(itemName),
+          defaultUomId: uomId,
+        },
+      }));
+
+    cache?.set(cacheKey, result);
+    return result;
   }
 
   private async ensureProject(
     tx: Prisma.TransactionClient,
     projectName: string,
     unitId: string,
+    cache?: Map<string, any>,
   ) {
+    const trimmed = projectName.trim();
+    const cacheKey = trimmed.toLowerCase();
+    if (cache?.has(cacheKey)) {
+      return cache.get(cacheKey);
+    }
+
     const normalizedCode = this.slugify(projectName);
     const existing = await tx.project.findFirst({
       where: {
-        OR: [{ code: normalizedCode }, { name: projectName.trim() }],
+        OR: [{ code: normalizedCode }, { name: trimmed }],
       },
     });
 
-    if (existing) {
-      return existing;
-    }
+    const result =
+      existing ||
+      (await tx.project.create({
+        data: {
+          code: normalizedCode,
+          name: trimmed,
+          unitId,
+        },
+      }));
 
-    return tx.project.create({
-      data: {
-        code: normalizedCode,
-        name: projectName.trim(),
-        unitId,
-      },
-    });
+    cache?.set(cacheKey, result);
+    return result;
   }
 
   private generateSku(itemName: string) {
