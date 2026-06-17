@@ -21,3 +21,19 @@ export class CommitImportDto {
   @IsBoolean()
   overwriteExisting?: boolean;
 }
+
+export class DirectImportDto {
+  @IsString()
+  warehouseId!: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  overwriteExisting?: boolean;
+
+  @IsOptional()
+  @IsEnum(ImportJobType)
+  type?: ImportJobType;
+}
+

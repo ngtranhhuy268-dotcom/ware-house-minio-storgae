@@ -13,7 +13,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import type { AuthUser } from '../common/types/auth-user.type';
-import { CommitImportDto, PreviewImportDto } from './dto/import.dto';
+import { CommitImportDto, DirectImportDto, PreviewImportDto } from './dto/import.dto';
 import { ImportsService } from './imports.service';
 
 @Controller('imports/excel')
@@ -37,4 +37,16 @@ export class ImportsController {
   commit(@Body() dto: CommitImportDto, @CurrentUser() user: AuthUser) {
     return this.importsService.commit(dto, user);
   }
+
+  @Post('direct')
+  @Roles(RoleName.ADMIN, RoleName.STAFF)
+  @UseInterceptors(FileInterceptor('file'))
+  direct(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: DirectImportDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.importsService.directImport(file, dto, user);
+  }
 }
+

@@ -278,51 +278,35 @@ export function AdminApp() {
     },
   });
 
-  const previewMutation = useMutation({
+  const directImportMutation = useMutation({
     mutationFn: async () => {
       if (!importFile) {
         throw new Error("missing-file");
       }
+      if (!importWarehouseId) {
+        throw new Error("missing-warehouse");
+      }
 
       const formData = new FormData();
       formData.append("file", importFile);
+      formData.set("warehouseId", importWarehouseId);
+      formData.set("overwriteExisting", "true");
       formData.set("type", "LEGACY_BOOTSTRAP");
-      const response = await api.post<ImportPreview>("/imports/excel/preview", formData, {
+
+      const response = await api.post<ImportPreview>("/imports/excel/direct", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setPreview(data);
-      setStatusMessage("Đã tạo preview import thành công.");
-    },
-    onError: (error) => {
-      setStatusMessage(
-        getErrorMessage(error, "Không thể đọc file Excel. Vui lòng kiểm tra định dạng."),
-      );
-    },
-  });
-
-  const commitMutation = useMutation({
-    mutationFn: async () => {
-      if (!preview || !importWarehouseId) {
-        throw new Error("missing-data");
-      }
-
-      await api.post("/imports/excel/commit", {
-        jobId: preview.jobId,
-        warehouseId: importWarehouseId,
-        overwriteExisting: true,
-      });
-    },
-    onSuccess: async () => {
-      setStatusMessage("Đã ghi dữ liệu import vào kho.");
-      setPreview(null);
-      setImportFile(null);
+      setStatusMessage("Đã đồng bộ dữ liệu Excel vào kho thành công.");
       await refreshOverview("Đã đồng bộ dữ liệu vào kho.");
     },
     onError: (error) => {
-      setStatusMessage(getErrorMessage(error, "Ghi dữ liệu import thất bại."));
+      setStatusMessage(
+        getErrorMessage(error, "Nhập dữ liệu thất bại. Vui lòng kiểm tra định dạng hoặc kết nối."),
+      );
     },
   });
 
@@ -797,7 +781,7 @@ export function AdminApp() {
               <div>
                 <p className="label">[ TIỆN ÍCH / ĐỒNG BỘ DỮ LIỆU EXCEL ]</p>
                 <p className="text-xs leading-relaxed text-muted">
-                  Bước 1: Chọn file Excel nguồn từ máy tính. Bước 2: Xem trước để kiểm tra tính hợp lệ. Bước 3: Chọn kho đích và tiến hành đồng bộ dữ liệu.
+                  Chọn file Excel nguồn từ máy tính và chọn kho đích, sau đó click "Nhập dữ liệu vào kho" để bắt đầu đồng bộ.
                 </p>
               </div>
 
@@ -816,8 +800,8 @@ export function AdminApp() {
                 </p>
                 <p className="mt-1 text-muted normal-case">
                   {preview
-                    ? "Đã nạp dữ liệu xem trước. Sẵn sàng tích hợp."
-                    : "Sau khi chọn file, vui lòng click Xem trước Excel để kiểm tra dữ liệu trước khi ghi."}
+                    ? "Đã đồng bộ dữ liệu vào kho thành công."
+                    : "Vui lòng chọn file và kho đích để tiến hành nhập dữ liệu trực tiếp."}
                 </p>
               </div>
 
@@ -834,31 +818,19 @@ export function AdminApp() {
                 ))}
               </select>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  className="button button-ghost w-full"
-                  disabled={!importFile || previewMutation.isPending}
-                  onClick={() => previewMutation.mutate()}
-                  type="button"
-                >
-                  {previewMutation.isPending ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin text-[#f08c00]" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4 text-[#f08c00]" />
-                  )}
-                  Xem trước Excel
-                </button>
-
+              <div className="grid gap-2">
                 <button
                   className="button button-primary w-full"
-                  disabled={!preview || !importWarehouseId || commitMutation.isPending}
-                  onClick={() => commitMutation.mutate()}
+                  disabled={!importFile || !importWarehouseId || directImportMutation.isPending}
+                  onClick={() => directImportMutation.mutate()}
                   type="button"
                 >
-                  {commitMutation.isPending ? (
+                  {directImportMutation.isPending ? (
                     <LoaderCircle className="h-4 w-4 animate-spin text-white" />
-                  ) : null}
-                  Đồng bộ vào kho
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 text-white" />
+                  )}
+                  Nhập dữ liệu vào kho
                 </button>
               </div>
 
@@ -876,7 +848,7 @@ export function AdminApp() {
             </div>
 
             <div className="grid gap-2 border border-line bg-surface p-4 text-xs text-muted font-sans rounded-xl">
-              <p className="font-bold text-foreground">Kết quả phân tích file</p>
+              <p className="font-bold text-foreground">Kết quả nhập dữ liệu</p>
               <div className="grid gap-1 border-t border-line pt-2 mt-1 font-mono">
                 <p>Mã hàng hóa: <strong className="text-foreground">{preview?.inventoryCount ?? 0}</strong></p>
                 <p>Số giao dịch: <strong className="text-foreground">{preview?.journalCount ?? 0}</strong></p>
@@ -904,13 +876,7 @@ export function AdminApp() {
 
               {!preview ? (
                 <div className="border border-line bg-[#fbfbf9] px-3 py-2 text-[10px] text-muted mt-2 rounded-lg text-center">
-                  Sẵn sàng phân tích file
-                </div>
-              ) : null}
-
-              {preview && !importWarehouseId ? (
-                <div className="border border-warning/20 bg-warning/5 px-3 py-2.5 text-[10px] text-warning mt-2 font-bold animate-pulse rounded-lg text-center">
-                  Yêu cầu chọn kho đích để hoàn tất đồng bộ
+                  Sẵn sàng nhập file
                 </div>
               ) : null}
             </div>
