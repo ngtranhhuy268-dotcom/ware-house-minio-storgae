@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  STAFF
+  TECHNICIAN
+}
+
+enum InventoryStatus {
+  OUT_OF_STOCK
+  LOW_STOCK
+  IN_STOCK
+}
+
+enum TransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum AttachmentKind {
+  PHOTO
+  INVOICE
+  EVIDENCE
+}
+
+enum ImportJobType {
+  LEGACY_BOOTSTRAP
+  BATCH_OPERATIONAL
+}
+
+enum ImportJobStatus {
+  PREVIEW
+  COMMITTED
+  FAILED
+}
+
+model Role {
+  id        String    @id @default(cuid())
+  name      RoleName  @unique
+  label     String
+  users     User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("roles")
+}
+
+model OrgUnit {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String?
+  isActive    Boolean     @default(true)
+  users       User[]
+  warehouses  Warehouse[]
+  projects    Project[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("org_units")
+}
+
+model User {
+  id               String                 @id @default(cuid())
+  email            String                 @unique
+  fullName         String
+  passwordHash     String
+  refreshTokenHash String?
+  isActive         Boolean                @default(true)
+  roleId           String
+  unitId           String?
+  role             Role                   @relation(fields: [roleId], references: [id])
+  unit             OrgUnit?               @relation(fields: [unitId], references: [id])
+  itemMedia        ItemMedia[]
+  transactions     InventoryTransaction[]
+  importJobs       ImportJob[]
+  auditLogs        AuditLog[]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@map("users")
+}
+
+model Warehouse {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  name           String
+  description    String?
+  isActive       Boolean          @default(true)
+  unitId         String
+  unit           OrgUnit          @relation(fields: [unitId], references: [id])
+  inventoryItems InventoryItem[]
+  transactions   InventoryTransaction[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("warehouses")
+}
+
+model Project {
+  id           String                 @id @default(cuid())
+  code         String                 @unique
+  name         String
+  description  String?
+  isActive     Boolean                @default(true)
+  unitId       String
+  unit         OrgUnit                @relation(fields: [unitId], references: [id])
+  transactions InventoryTransaction[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@map("projects")
+}
+
+model Uom {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  items       Item[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("uoms")
+}
+
+model Item {
+  id              String                 @id @default(cuid())
+  sku             String                 @unique
+  name            String
+  description     String?
+  defaultUomId    String
+  defaultUom      Uom                    @relation(fields: [defaultUomId], references: [id])
+  media           ItemMedia[]
+  inventoryItems  InventoryItem[]
+  transactions    InventoryTransaction[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([name, defaultUomId])
+  @@map("items")
+}
+
+model ItemMedia {
+  id           String   @id @default(cuid())
+  itemId       String
+  uploadedById String?
+  storageKey   String
+  fileName     String
+  mimeType     String
+  size         Int
+  item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@map("item_media")
+}
+
+model InventoryItem {
+  id             String                 @id @default(cuid())
+  itemId         String
+  warehouseId    String
+  openingQty     Float                  @default(0)
+  totalInQty     Float                  @default(0)
+  totalOutQty    Float                  @default(0)
+  currentQty     Float                  @default(0)
+  minQty         Float                  @default(5)
+  status         InventoryStatus        @default(IN_STOCK)
+  legacyStatus   String?
+  lastMovementAt DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  item           Item                   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  warehouse      Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  transactions   InventoryTransaction[]
+
+  @@unique([itemId, warehouseId])
+  @@map("inventory_items")
+}
+
+model InventoryTransaction {
+  id             String          @id @default(cuid())
+  inventoryItemId String
+  itemId         String
+  warehouseId    String
+  unitId         String?
+  projectId      String?
+  createdById    String
+  type           TransactionType
+  quantity       Float
+  quantityBefore Float
+  quantityAfter  Float
+  referenceCode  String?
+  note           String?
+  metadata       Json?
+  legacyImported Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  inventoryItem  InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  item           Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  project        Project?        @relation(fields: [projectId], references: [id])
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  attachments    TransactionAttachment[]
+
+  @@map("inventory_transactions")
+}
+
+model TransactionAttachment {
+  id            String               @id @default(cuid())
+  transactionId String
+  kind          AttachmentKind
+  storageKey    String
+  fileName      String
+  mimeType      String
+  size          Int
+  createdAt     DateTime             @default(now())
+  transaction   InventoryTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_attachments")
+}
+
+model ImportJob {
+  id             String          @id @default(cuid())
+  type           ImportJobType
+  status         ImportJobStatus
+  fileName       String
+  previewSummary Json?
+  errorSummary   Json?
+  committedAt    DateTime?
+  createdById    String
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("import_jobs")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
