@@ -38,25 +38,25 @@ export function AppShell({
 
   return (
     <div className="app-shell gap-4">
-      <header className="flex flex-col gap-5 bg-slate-900 border border-slate-800 text-slate-100 p-6 rounded-2xl shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <header className="panel border-t-[5px] border-t-primary flex flex-col gap-4 bg-white border-x border-b border-line p-6 rounded-2xl shadow-md transition-all duration-300">
+        <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-primary/20 text-primary rounded-xl border border-primary/30">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-primary/10 text-primary rounded-xl border border-primary/20">
               <LayoutGrid className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-sans text-base font-bold tracking-tight text-white">
+              <p className="font-sans text-base font-bold tracking-tight text-foreground">
                 Warehouse Hub
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-medium text-slate-400">Hệ thống sẵn sàng</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Hệ thống hoạt động</span>
               </div>
             </div>
           </div>
 
           <button
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 hidden md:inline-flex"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer rounded-lg text-muted hover:text-foreground hover:bg-[#fbfbf9] border border-line hidden md:inline-flex"
             onClick={async () => {
               await logout();
               router.replace("/login");
@@ -70,22 +70,22 @@ export function AppShell({
 
         <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <span className="inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-800 text-slate-300 rounded-md">
+            <span className="inline-block text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 bg-primary/10 text-primary rounded-md">
               Không gian làm việc
             </span>
-            <h1 className="font-sans text-xl font-bold tracking-tight text-white mt-1.5">
+            <h1 className="font-sans text-xl font-bold tracking-tight text-foreground mt-2">
               {title}
             </h1>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">{subtitle}</p>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">{subtitle}</p>
           </div>
 
-          <div className="flex items-center gap-3 border border-slate-800 bg-slate-950/40 px-4 py-3 rounded-xl">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/25 text-primary font-bold text-sm border border-primary/40 shadow-sm shadow-primary/10">
+          <div className="flex items-center gap-3 border border-line bg-[#fcfcfb] px-4 py-3 rounded-xl shadow-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm border border-primary/20 shadow-xs">
               {session?.user.fullName?.charAt(0) ?? "U"}
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-slate-200">{session?.user.fullName}</p>
-              <p className="mt-0.5 text-[10px] text-slate-400 font-medium">
+              <p className="text-xs font-bold text-foreground">{session?.user.fullName}</p>
+              <p className="mt-0.5 text-[10px] text-muted font-medium">
                 {session?.user.roleLabel}
                 {session?.user.unitName ? ` • ${session.user.unitName}` : ""}
               </p>
@@ -93,7 +93,7 @@ export function AppShell({
           </div>
         </div>
 
-        <nav className="hidden flex-wrap gap-2 md:flex border-t border-slate-800 pt-4">
+        <nav className="hidden flex-wrap gap-2 md:flex border-t border-line pt-4">
           {availableNavItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
@@ -102,8 +102,8 @@ export function AppShell({
                 key={item.href}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer rounded-lg ${
                   active
-                    ? "bg-primary text-white shadow-md shadow-primary/25"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800"
+                    ? "bg-primary text-white shadow-md shadow-primary/20 border border-primary"
+                    : "bg-white text-muted hover:text-foreground hover:bg-[#fbfbf9] border border-line"
                 }`}
                 href={item.href}
               >
@@ -114,10 +114,10 @@ export function AppShell({
           })}
         </nav>
 
-        {actions ? <div className="flex flex-wrap gap-3 border-t border-slate-800 pt-4">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap gap-3 border-t border-line pt-4">{actions}</div> : null}
       </header>
 
-      <main className="grid gap-4 animate-fade-in-up">{children}</main>
+      <main className="grid gap-4">{children}</main>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-3 py-3 backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-[1fr_1fr_auto] gap-2">

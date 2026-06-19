@@ -345,6 +345,58 @@ export function InventoryApp() {
     },
   });
 
+  const activeFiltersList = useMemo(() => {
+    const list: Array<{ key: keyof FilterState; label: string; displayValue: string }> = [];
+    
+    if (filters.warehouseId && optionsQuery.data?.warehouses) {
+      const wh = optionsQuery.data.warehouses.find(w => w.id === filters.warehouseId);
+      if (wh) list.push({ key: "warehouseId", label: "Kho", displayValue: wh.name });
+    }
+    if (filters.unitId && optionsQuery.data?.units) {
+      const u = optionsQuery.data.units.find(item => item.id === filters.unitId);
+      if (u) list.push({ key: "unitId", label: "Đơn vị", displayValue: u.name });
+    }
+    if (filters.status && optionsQuery.data?.statuses) {
+      const st = optionsQuery.data.statuses.find(item => item.value === filters.status);
+      if (st) list.push({ key: "status", label: "Trạng thái", displayValue: st.label });
+    }
+    if (filters.uomId && optionsQuery.data?.uoms) {
+      const uom = optionsQuery.data.uoms.find(item => item.id === filters.uomId);
+      if (uom) list.push({ key: "uomId", label: "ĐVT", displayValue: uom.name });
+    }
+    if (filters.hasAttachments !== "") {
+      list.push({
+        key: "hasAttachments",
+        label: "Đính kèm",
+        displayValue: filters.hasAttachments === "true" ? "Có tệp" : "Không tệp",
+      });
+    }
+    if (filters.updatedFrom) {
+      list.push({ key: "updatedFrom", label: "Từ ngày", displayValue: filters.updatedFrom });
+    }
+    if (filters.updatedTo) {
+      list.push({ key: "updatedTo", label: "Đến ngày", displayValue: filters.updatedTo });
+    }
+    
+    return list;
+  }, [filters, optionsQuery.data]);
+
+  const clearFilter = (key: keyof FilterState) => {
+    setFilters((current) => {
+      const next = { ...current, page: 1 };
+      if (key === "hasAttachments") {
+        next.hasAttachments = "";
+      } else if (key === "sortBy") {
+        next.sortBy = "updatedAt";
+      } else if (key === "sortOrder") {
+        next.sortOrder = "desc";
+      } else {
+        (next as any)[key] = "";
+      }
+      return next;
+    });
+  };
+
   const indicatorsQuery = useQuery({
     queryKey: ["dashboard-indicators"],
     queryFn: async () => {
@@ -565,6 +617,46 @@ export function InventoryApp() {
               />
             </div>
 
+            {activeFiltersList.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                <span className="text-[9px] font-bold text-muted uppercase tracking-wider">Đang lọc:</span>
+                {activeFiltersList.map((item) => (
+                  <span
+                    key={item.key}
+                    className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary px-2.5 py-1 text-xs rounded-full font-medium"
+                  >
+                    <span>{item.label}: <strong className="text-slate-800 font-semibold">{item.displayValue}</strong></span>
+                    <button
+                      className="hover:bg-primary/20 rounded-full h-4 w-4 flex items-center justify-center font-bold text-[10px] leading-none transition-colors cursor-pointer"
+                      onClick={() => clearFilter(item.key)}
+                      type="button"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+                <button
+                  className="text-[9px] font-bold text-muted hover:text-primary uppercase tracking-wider ml-1 hover:underline cursor-pointer"
+                  onClick={() =>
+                    setFilters((current) => ({
+                      ...current,
+                      warehouseId: "",
+                      unitId: "",
+                      status: "",
+                      uomId: "",
+                      hasAttachments: "",
+                      updatedFrom: "",
+                      updatedTo: "",
+                      page: 1,
+                    }))
+                  }
+                  type="button"
+                >
+                  Xoá tất cả
+                </button>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <button
                 className="button button-ghost w-full"
@@ -603,136 +695,154 @@ export function InventoryApp() {
           </div>
 
           {showFilters ? (
-            <div className="grid gap-4 border border-line bg-[#fcfcfb] p-4 md:grid-cols-2 xl:grid-cols-4 rounded-xl">
-              <FilterSelect
-                label="Kho"
-                onChange={(value) => setFilters((current) => ({ ...current, warehouseId: value, page: 1 }))}
-                options={optionsQuery.data?.warehouses ?? []}
-                value={filters.warehouseId}
-              />
-              <FilterSelect
-                label="Đơn vị"
-                onChange={(value) => setFilters((current) => ({ ...current, unitId: value, page: 1 }))}
-                options={optionsQuery.data?.units ?? []}
-                value={filters.unitId}
-              />
-              <FilterSelect
-                label="Trạng thái"
-                onChange={(value) => setFilters((current) => ({ ...current, status: value, page: 1 }))}
-                options={
-                  optionsQuery.data?.statuses.map((item) => ({ id: item.value, name: item.label })) ?? []
-                }
-                value={filters.status}
-              />
-              <FilterSelect
-                label="Đơn vị tính"
-                onChange={(value) => setFilters((current) => ({ ...current, uomId: value, page: 1 }))}
-                options={optionsQuery.data?.uoms ?? []}
-                value={filters.uomId}
-              />
+            <div className="grid gap-6 border border-line bg-[#fcfcfb] p-6 rounded-2xl shadow-xs animate-fade-in-up">
+              {/* Group 1: Phân loại & Địa điểm */}
+              <div>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-3 border-b border-line/60 pb-1.5">
+                  Phân loại & Vị trí
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                  <FilterSelect
+                    label="Kho lưu trữ"
+                    onChange={(value) => setFilters((current) => ({ ...current, warehouseId: value, page: 1 }))}
+                    options={optionsQuery.data?.warehouses ?? []}
+                    value={filters.warehouseId}
+                  />
+                  <FilterSelect
+                    label="Đơn vị sử dụng"
+                    onChange={(value) => setFilters((current) => ({ ...current, unitId: value, page: 1 }))}
+                    options={optionsQuery.data?.units ?? []}
+                    value={filters.unitId}
+                  />
+                  <FilterSelect
+                    label="Đơn vị tính (ĐVT)"
+                    onChange={(value) => setFilters((current) => ({ ...current, uomId: value, page: 1 }))}
+                    options={optionsQuery.data?.uoms ?? []}
+                    value={filters.uomId}
+                  />
+                  <label className="block">
+                    <span className="label">Tệp đính kèm</span>
+                    <select
+                      className="field cursor-pointer text-sm font-sans"
+                      onChange={(event) =>
+                        setFilters((current) => ({
+                          ...current,
+                          hasAttachments: event.target.value,
+                          page: 1,
+                        }))
+                      }
+                      value={filters.hasAttachments}
+                    >
+                      <option value="">Tất cả</option>
+                      <option value="true">Có đính kèm</option>
+                      <option value="false">Không đính kèm</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
 
-              <label className="block">
-                <span className="label">Tệp đính kèm</span>
-                <select
-                  className="field cursor-pointer text-sm font-sans"
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      hasAttachments: event.target.value,
-                      page: 1,
-                    }))
-                  }
-                  value={filters.hasAttachments}
-                >
-                  <option value="">Tất cả</option>
-                  <option value="true">Có đính kèm</option>
-                  <option value="false">Không đính kèm</option>
-                </select>
-              </label>
+              {/* Group 2: Trạng thái & Thời gian */}
+              <div>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-3 border-b border-line/60 pb-1.5">
+                  Trạng thái & Thời gian
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <FilterSelect
+                    label="Trạng thái hàng hoá"
+                    onChange={(value) => setFilters((current) => ({ ...current, status: value, page: 1 }))}
+                    options={
+                      optionsQuery.data?.statuses.map((item) => ({ id: item.value, name: item.label })) ?? []
+                    }
+                    value={filters.status}
+                  />
+                  <label className="block">
+                    <span className="label">Cập nhật từ ngày</span>
+                    <input
+                      className="field cursor-pointer text-sm font-sans"
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, updatedFrom: event.target.value, page: 1 }))
+                      }
+                      type="date"
+                      value={filters.updatedFrom}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="label">Cập nhật đến ngày</span>
+                    <input
+                      className="field cursor-pointer text-sm font-sans"
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, updatedTo: event.target.value, page: 1 }))
+                      }
+                      type="date"
+                      value={filters.updatedTo}
+                    />
+                  </label>
+                </div>
+              </div>
 
-              <label className="block">
-                <span className="label">Cập nhật từ ngày</span>
-                <input
-                  className="field cursor-pointer text-sm font-sans"
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, updatedFrom: event.target.value, page: 1 }))
-                  }
-                  type="date"
-                  value={filters.updatedFrom}
-                />
-              </label>
+              {/* Group 3: Sắp xếp & Thứ tự */}
+              <div className="border-t border-line/60 pt-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div className="grid gap-4 sm:grid-cols-2 flex-1 max-w-2xl">
+                  <label className="block">
+                    <span className="label">Sắp xếp theo</span>
+                    <select
+                      className="field cursor-pointer text-sm font-sans"
+                      onChange={(event) =>
+                        setFilters((current) => ({
+                          ...current,
+                          sortBy: event.target.value as FilterState["sortBy"],
+                          page: 1,
+                        }))
+                      }
+                      value={filters.sortBy}
+                    >
+                      <option value="updatedAt">Ngày cập nhật</option>
+                      <option value="qty">Số lượng tồn kho</option>
+                      <option value="name">Tên vật tư</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="label">Thứ tự hiển thị</span>
+                    <select
+                      className="field cursor-pointer text-sm font-sans"
+                      onChange={(event) =>
+                        setFilters((current) => ({
+                          ...current,
+                          sortOrder: event.target.value as FilterState["sortOrder"],
+                          page: 1,
+                        }))
+                      }
+                      value={filters.sortOrder}
+                    >
+                      <option value="desc">Giảm dần (Mới nhất)</option>
+                      <option value="asc">Tăng dần (Cũ nhất)</option>
+                    </select>
+                  </label>
+                </div>
 
-              <label className="block">
-                <span className="label">Cập nhật đến ngày</span>
-                <input
-                  className="field cursor-pointer text-sm font-sans"
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, updatedTo: event.target.value, page: 1 }))
-                  }
-                  type="date"
-                  value={filters.updatedTo}
-                />
-              </label>
-
-              <label className="block">
-                <span className="label">Sắp xếp theo</span>
-                <select
-                  className="field cursor-pointer text-sm font-sans"
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      sortBy: event.target.value as FilterState["sortBy"],
-                      page: 1,
-                    }))
-                  }
-                  value={filters.sortBy}
-                >
-                  <option value="updatedAt">Ngày cập nhật</option>
-                  <option value="qty">Số lượng tồn kho</option>
-                  <option value="name">Tên vật tư</option>
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="label">Thứ tự hiển thị</span>
-                <select
-                  className="field cursor-pointer text-sm font-sans"
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      sortOrder: event.target.value as FilterState["sortOrder"],
-                      page: 1,
-                    }))
-                  }
-                  value={filters.sortOrder}
-                >
-                  <option value="desc">Giảm dần (Mới nhất)</option>
-                  <option value="asc">Tăng dần (Cũ nhất)</option>
-                </select>
-              </label>
-
-              <div className="flex items-end">
-                <button
-                  className="button button-ghost w-full"
-                  onClick={() =>
-                    setFilters((current) => ({
-                      ...current,
-                      warehouseId: "",
-                      unitId: "",
-                      status: "",
-                      uomId: "",
-                      hasAttachments: "",
-                      updatedFrom: "",
-                      updatedTo: "",
-                      sortBy: "updatedAt",
-                      sortOrder: "desc",
-                      page: 1,
-                    }))
-                  }
-                  type="button"
-                >
-                  Đặt lại bộ lọc
-                </button>
+                <div className="sm:max-w-xs w-full">
+                  <button
+                    className="button button-ghost w-full"
+                    onClick={() =>
+                      setFilters((current) => ({
+                        ...current,
+                        warehouseId: "",
+                        unitId: "",
+                        status: "",
+                        uomId: "",
+                        hasAttachments: "",
+                        updatedFrom: "",
+                        updatedTo: "",
+                        sortBy: "updatedAt",
+                        sortOrder: "desc",
+                        page: 1,
+                      }))
+                    }
+                    type="button"
+                  >
+                    Đặt lại bộ lọc
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
