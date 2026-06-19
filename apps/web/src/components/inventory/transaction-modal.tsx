@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LoaderCircle, X } from "lucide-react";
 import { FileField, FilterSelect } from "./inventory-shared";
 
@@ -46,6 +47,7 @@ export function TransactionModal({
   options: {
     warehouses: Array<{ id: string; name: string }>;
     uoms: Array<{ id: string; name: string }>;
+    items?: Array<{ id: string; name: string; defaultUomId: string }>;
   };
   onChange: (nextDraft: TransactionDraft) => void;
   onClose: () => void;
@@ -56,6 +58,20 @@ export function TransactionModal({
     draft.mode === "OUT"
       ? "Ví dụ: cấp cho tổ điện sửa máy, thay vật tư bảo trì..."
       : "Nhập thông tin ghi chú...";
+
+  const [showSuggestions, setShowSuggestions] = useState(true);
+
+  const typedName = draft.itemName.trim().toLowerCase();
+  const suggestions =
+    typedName.length > 0 && !draft.itemId && showSuggestions
+      ? (options.items || [])
+          .filter(
+            (item) =>
+              item.name.toLowerCase().includes(typedName) &&
+              item.name.toLowerCase() !== typedName
+          )
+          .slice(0, 5)
+      : [];
 
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs">
@@ -97,14 +113,42 @@ export function TransactionModal({
                 </label>
               ) : (
                 <>
-                  <label className="block">
+                  <label className="block relative">
                     <span className="label">Tên vật tư</span>
                     <input
                       className="field font-sans"
-                      onChange={(event) => onChange({ ...draft, itemName: event.target.value })}
+                      onChange={(event) => {
+                        onChange({ ...draft, itemName: event.target.value, itemId: "" });
+                        setShowSuggestions(true);
+                      }}
                       placeholder="Nhập tên vật tư..."
                       value={draft.itemName}
+                      autoComplete="off"
                     />
+
+                    {suggestions.length > 0 && (
+                      <ul className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-line bg-surface py-1 shadow-lg font-sans text-xs">
+                        {suggestions.map((item) => (
+                          <li key={item.id}>
+                            <button
+                              className="w-full px-3 py-2 text-left hover:bg-[#f8f9fa] cursor-pointer text-foreground"
+                              onClick={() => {
+                                onChange({
+                                  ...draft,
+                                  itemId: item.id,
+                                  itemName: item.name,
+                                  uomId: item.defaultUomId,
+                                });
+                                setShowSuggestions(false);
+                              }}
+                              type="button"
+                            >
+                              {item.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </label>
                   <FilterSelect
                     label="Đơn vị tính"

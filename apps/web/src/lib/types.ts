@@ -39,6 +39,7 @@ export type InventoryOptionsResponse = {
   warehouses: InventoryOption[];
   projects: InventoryOption[];
   uoms: InventoryOption[];
+  items?: Array<{ id: string; name: string; defaultUomId: string }>;
   statuses: Array<{ value: string; label: string }>;
 };
 

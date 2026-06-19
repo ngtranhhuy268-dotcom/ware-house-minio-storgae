@@ -1,4 +1,4 @@
-﻿import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, RoleName } from '@prisma/client';
 import type { AuthUser } from '../common/types/auth-user.type';
 import { getInventoryStatusLabel } from '../common/utils/inventory-status.util';
@@ -94,7 +94,7 @@ export class InventoryService {
     const unitFilter =
       user.role === RoleName.ADMIN || !user.unitId ? {} : { unitId: user.unitId };
 
-    const [units, warehouses, projects, uoms] = await Promise.all([
+    const [units, warehouses, projects, uoms, items] = await Promise.all([
       user.role === RoleName.ADMIN
         ? this.prisma.orgUnit.findMany({
             where: { isActive: true },
@@ -120,6 +120,14 @@ export class InventoryService {
       this.prisma.uom.findMany({
         orderBy: { name: 'asc' },
       }),
+      this.prisma.item.findMany({
+        select: {
+          id: true,
+          name: true,
+          defaultUomId: true,
+        },
+        orderBy: { name: 'asc' },
+      }),
     ]);
 
     return {
@@ -127,6 +135,7 @@ export class InventoryService {
       warehouses,
       projects,
       uoms,
+      items,
       statuses: [
         { value: 'IN_STOCK', label: 'Còn hàng' },
         { value: 'LOW_STOCK', label: 'Sắp hết' },

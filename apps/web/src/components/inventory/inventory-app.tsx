@@ -331,14 +331,24 @@ export function InventoryApp() {
         },
       });
     },
-    onSuccess: async () => {
-      setStatusMessage("Đã lưu giao dịch thành công.");
+    onSuccess: async (_, variables) => {
+      const existingItem = optionsQuery.data?.items?.find(
+        (item) => item.name.trim().toLowerCase() === variables.itemName.trim().toLowerCase()
+      );
+      const isNewItemCreated = !variables.itemId && !existingItem;
+
+      if (isNewItemCreated && variables.mode === "IN") {
+        setStatusMessage(`Đã tạo vật tư mới "${variables.itemName}" và ghi nhận nhập kho thành công.`);
+      } else {
+        setStatusMessage("Đã lưu giao dịch thành công.");
+      }
       setDraft(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["inventory"] }),
         queryClient.invalidateQueries({ queryKey: ["inventory-detail"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-indicators"] }),
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory-options"] }),
       ]);
     },
     onError: (error) => {
@@ -842,6 +852,7 @@ export function InventoryApp() {
           options={{
             warehouses: optionsQuery.data?.warehouses ?? [],
             uoms: optionsQuery.data?.uoms ?? [],
+            items: optionsQuery.data?.items ?? [],
           }}
         />
       ) : null}
