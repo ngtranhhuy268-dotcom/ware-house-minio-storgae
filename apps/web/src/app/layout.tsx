@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro, Space_Grotesk } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const bodyFont = Be_Vietnam_Pro({
+const bodyFont = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
 });
 
-const displayFont = Space_Grotesk({
+const displayFont = Plus_Jakarta_Sans({
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
