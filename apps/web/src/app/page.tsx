@@ -1,72 +1,76 @@
 import Link from "next/link";
+import { ArrowRight, ArrowRightLeft, Boxes, FileSpreadsheet } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="app-shell justify-center">
-      <section className="panel mx-auto grid max-w-6xl gap-10 overflow-hidden md:grid-cols-[1.15fr_0.85fr]">
-        <div className="flex flex-col justify-between gap-8">
+    <main className="app-shell justify-center py-12">
+      <section className="panel mx-auto grid max-w-5xl gap-10 overflow-hidden md:grid-cols-[1.1fr_0.9fr] p-8 md:p-12">
+        
+        {/* Left Side: Information and Navigation */}
+        <div className="flex flex-col justify-between gap-10">
           <div className="space-y-6">
-            <span className="inline-flex w-fit border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary rounded-full">
-              [ SYSTEM_PORTAL // ONLINE ]
+            <span className="inline-flex w-fit border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary rounded-full">
+              Hệ thống kho nội bộ
             </span>
             <div className="space-y-4">
-              <h1 className="font-sans text-4xl font-extrabold tracking-tight text-foreground md:text-5xl leading-tight">
-                Warehouse Hub // Control Deck
+              <h1 className="font-[family-name:var(--font-display)] text-4xl font-black tracking-tight text-foreground md:text-5xl leading-tight uppercase">
+                Warehouse Hub
               </h1>
-              <p className="max-w-2xl text-xs leading-relaxed text-muted normal-case">
-                Hệ thống kiểm soát tồn kho vật tư, quản lý giao dịch nhập xuất, đối chiếu dữ liệu Excel danh mục hàng hóa nội bộ. Cấu hình phân quyền chặt chẽ cho Quản trị viên, Thủ kho và Kỹ thuật viên bảo trì.
+              <p className="max-w-xl text-sm leading-relaxed text-muted">
+                Hệ thống kiểm soát tồn kho vật tư, quản lý giao dịch nhập xuất và đối chiếu dữ liệu Excel danh mục hàng hóa nội bộ. Giao diện tối ưu, dễ vận hành cho cả thủ kho và kỹ thuật viên.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Link className="button button-primary" href="/login">
-              Đăng nhập hệ thống
-            </Link>
-            <Link className="button button-ghost" href="/inventory">
+            <Link className="button button-primary h-12 px-6 flex items-center justify-center gap-2 rounded-xl text-xs font-bold" href="/inventory">
               Vào giao diện kho
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link className="button h-12 px-6 flex items-center justify-center gap-2 rounded-xl text-xs font-bold bg-white text-slate-700 border-line hover:bg-slate-50" href="/login">
+              Đăng nhập hệ thống
             </Link>
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <div className="panel-strong bg-[#fcfcfb] border border-line p-5 rounded-2xl">
-            <p className="label">[ MODULE_TELEMETRY ]</p>
-            <div className="grid gap-2 text-xs font-mono text-muted">
-              <div className="border border-line bg-surface p-3 flex justify-between rounded-lg">
-                <span>DASHBOARD_INDICATORS</span>
-                <span className="text-success font-bold">[ OK ]</span>
+        {/* Right Side: Key Features Showcase */}
+        <div className="flex flex-col justify-center gap-4">
+          <div className="space-y-3">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Các tính năng chính</h3>
+            
+            <div className="space-y-3">
+              {/* Feature 1 */}
+              <div className="flex items-start gap-4 rounded-2xl border border-line bg-[#fcfcfb] p-4">
+                <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Quản lý tồn kho thực tế</h4>
+                  <p className="text-xs text-muted mt-0.5">Kiểm tra nhanh số lượng vật tư, đơn vị tính và hình ảnh chi tiết.</p>
+                </div>
               </div>
-              <div className="border border-line bg-surface p-3 flex justify-between rounded-lg">
-                <span>SERVER_SIDE_QUERY_FILTER</span>
-                <span className="text-success font-bold">[ ACTIVE ]</span>
+
+              {/* Feature 2 */}
+              <div className="flex items-start gap-4 rounded-2xl border border-line bg-[#fcfcfb] p-4">
+                <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                  <ArrowRightLeft className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Giao dịch Nhập & Xuất</h4>
+                  <p className="text-xs text-muted mt-0.5">Ghi nhận tức thời lịch sử xuất kho cho thợ và nhập kho từ nhà cung cấp.</p>
+                </div>
               </div>
-              <div className="border border-line bg-surface p-3 flex justify-between rounded-lg">
-                <span>DATA_HISTORIAN_DRAWER</span>
-                <span className="text-success font-bold">[ LOADED ]</span>
+
+              {/* Feature 3 */}
+              <div className="flex items-start gap-4 rounded-2xl border border-line bg-[#fcfcfb] p-4">
+                <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Nhập liệu Excel thông minh</h4>
+                  <p className="text-xs text-muted mt-0.5">Hỗ trợ import danh mục vật tư số lượng lớn từ Excel tiện lợi.</p>
+                </div>
               </div>
-              <div className="border border-line bg-surface p-3 flex justify-between rounded-lg">
-                <span>EXCEL_PARSER_IMAGE_EMBED</span>
-                <span className="text-success font-bold">[ READY ]</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="panel-strong bg-[#fcfcfb] border border-line p-5 rounded-2xl">
-            <p className="label">[ ACTIVE_HAZARD_LEVELS ]</p>
-            <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-              <span className="border border-line bg-surface px-3 py-1.5 text-foreground rounded-full">
-                SUBSTRATE: DEEP_LIGHT
-              </span>
-              <span className="border border-[#c3fae8] bg-[#e6fcf5] px-3 py-1.5 text-[#0ca678] rounded-full">
-                INBOUND: ACTIVE
-              </span>
-              <span className="border border-primary/25 bg-primary/5 px-3 py-1.5 text-primary rounded-full">
-                OUTBOUND: STAGE
-              </span>
-              <span className="border border-[#ffe066] bg-[#fff9db] px-3 py-1.5 text-[#f08c00] rounded-full">
-                ADJUSTMENT: VERIFY
-              </span>
             </div>
           </div>
         </div>
