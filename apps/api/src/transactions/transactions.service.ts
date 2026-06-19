@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -418,7 +418,7 @@ export class TransactionsService {
         (fileGroup ?? []).map((file) =>
           this.mediaService.uploadBuffer(
             file.buffer,
-            file.originalname,
+            Buffer.from(file.originalname, 'latin1').toString('utf8'),
             prefix,
             file.mimetype,
           ),

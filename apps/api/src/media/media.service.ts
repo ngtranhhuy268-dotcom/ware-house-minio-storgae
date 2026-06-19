@@ -69,6 +69,19 @@ export class MediaService implements OnModuleInit {
   }
 
   async getSignedUrl(storageKey: string) {
+    const publicEndpoint = this.config.minioPublicEndpoint;
+    if (publicEndpoint.includes('/storage/v1/object/public')) {
+      const bucket = this.config.minioBucket;
+      const cleanEndpoint = publicEndpoint.endsWith('/')
+        ? publicEndpoint.slice(0, -1)
+        : publicEndpoint;
+
+      if (cleanEndpoint.endsWith(bucket)) {
+        return `${cleanEndpoint}/${storageKey}`;
+      }
+      return `${cleanEndpoint}/${bucket}/${storageKey}`;
+    }
+
     return getSignedUrl(
       this.publicS3,
       new GetObjectCommand({

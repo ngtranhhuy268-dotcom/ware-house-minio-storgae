@@ -79,7 +79,7 @@ export class ImportsService {
       data: {
         type: dto.type ?? ImportJobType.LEGACY_BOOTSTRAP,
         status: ImportJobStatus.PREVIEW,
-        fileName: file.originalname,
+        fileName: Buffer.from(file.originalname, 'latin1').toString('utf8'),
         createdById: user.id,
       },
     });
@@ -478,7 +478,7 @@ export class ImportsService {
       data: {
         type: dto.type ?? ImportJobType.LEGACY_BOOTSTRAP,
         status: ImportJobStatus.PREVIEW, // initially set to preview, then committed
-        fileName: file.originalname,
+        fileName: Buffer.from(file.originalname, 'latin1').toString('utf8'),
         createdById: user.id,
       },
     });
