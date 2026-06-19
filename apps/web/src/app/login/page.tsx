@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -8,59 +8,75 @@ import { useAuth } from "@/lib/auth-context";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState("admin@warehouse.local");
-  const [password, setPassword] = useState("Admin@123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [capsLockActive, setCapsLockActive] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const checkCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.getModifierState("CapsLock")) {
+      setCapsLockActive(true);
+    } else {
+      setCapsLockActive(false);
+    }
+  };
 
   return (
-    <main className="app-shell justify-center">
-      <section className="mx-auto grid w-full max-w-5xl gap-4 md:grid-cols-[0.92fr_1.08fr]">
-        <div className="panel overflow-hidden bg-[linear-gradient(160deg,#082554,#0f3d8c)] p-6 text-white sm:p-8 md:p-10">
-          <div className="flex h-full flex-col justify-between gap-8">
-            <div className="space-y-5">
-              <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em]">
-                Warehouse Hub
-              </span>
-              <div className="space-y-3">
-                <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">
-                  Quản lý kho nội bộ trên một giao diện gọn, dễ dùng.
-                </h1>
-                <p className="max-w-xl text-sm leading-7 text-blue-100/90">
-                  Đăng nhập để xem tồn kho, nhập xuất vật tư, import/export Excel và quản trị
-                  người dùng trong cùng một app.
-                </p>
-              </div>
-            </div>
+    <main className="app-shell justify-center min-h-screen py-12">
+      <section className="mx-auto grid w-full max-w-4xl overflow-hidden rounded-[24px] border border-line bg-surface shadow-2xl md:grid-cols-[0.85fr_1.15fr]">
+        
+        {/* Left Branding Panel: Premium Dark with Coral Radial Glow */}
+        <div className="relative flex flex-col items-center justify-center overflow-hidden bg-slate-950 p-10 text-white md:p-12">
+          {/* Ambient light glow */}
+          <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-primary/10 blur-[80px]" />
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-orange-500/5 blur-[80px]" />
 
-            <div className="grid gap-3 text-sm">
-              <div className="rounded-[24px] bg-white/10 p-4">
-                Admin tạo tài khoản cho nhân viên kho và thợ. V1 không mở đăng ký công khai.
-              </div>
-              <div className="rounded-[24px] bg-white/10 p-4">
-                Màn kho được tối ưu mobile-first, thao tác nhập, xuất và chỉnh kho ngay trên một
-                màn hình chính.
-              </div>
-            </div>
+          <div className="relative z-10 text-center space-y-3">
+            <h1 className="text-4xl font-black tracking-tight sm:text-5xl bg-gradient-to-br from-white via-slate-200 to-primary bg-clip-text text-transparent uppercase font-[family-name:var(--font-display)]">
+              Warehouse Hub
+            </h1>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+              Internal Storage System
+            </p>
           </div>
         </div>
 
-        <div className="panel-strong p-6 sm:p-8 md:p-10">
-          <div className="mx-auto flex max-w-xl flex-col gap-6">
-            <div>
-              <p className="label">Đăng nhập</p>
-              <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-slate-950">
-                Chào mừng trở lại
+        {/* Right Form Panel */}
+        <div className="p-8 sm:p-10 md:p-12 bg-white flex flex-col justify-center">
+          <div className="mx-auto w-full max-w-sm space-y-6">
+            
+            {/* Header Text */}
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 font-[family-name:var(--font-display)]">
+                Đăng nhập hệ thống
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Dùng tài khoản được Admin cấp để truy cập hệ thống kho nội bộ.
+              <p className="text-xs text-muted">
+                Nhập thông tin tài khoản của bạn để truy cập kho
               </p>
             </div>
 
+            {/* Error Message Box */}
+            {error ? (
+              <div className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-800 animate-fade-in">
+                <div className="flex items-center gap-2 font-semibold">
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+                  Đăng nhập thất bại
+                </div>
+                <p className="text-xs text-red-600/90 pl-4">{error}</p>
+              </div>
+            ) : null}
+
+            {/* Form */}
             <form
-              className="grid gap-5"
+              className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
+                if (!email || !password) {
+                  setError("Vui lòng điền đầy đủ email và mật khẩu.");
+                  return;
+                }
                 setSubmitting(true);
                 setError("");
 
@@ -68,58 +84,76 @@ export default function LoginPage() {
                   await login(email, password);
                   router.replace("/inventory");
                 } catch {
-                  setError("Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.");
+                  setError("Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại.");
                 } finally {
                   setSubmitting(false);
                 }
               }}
             >
-              <label>
-                <span className="label">Email</span>
+              <div className="space-y-1">
+                <span className="label text-[10px] font-bold uppercase tracking-wider text-slate-500">Email</span>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    className="field pl-11"
+                    className="field pl-11 h-11 w-full text-sm"
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="admin@warehouse.local"
+                    placeholder="name@example.com"
                     type="email"
                     value={email}
+                    required
                   />
                 </div>
-              </label>
+              </div>
 
-              <label>
-                <span className="label">Mật khẩu</span>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="label text-[10px] font-bold uppercase tracking-wider text-slate-500">Mật khẩu</span>
+                </div>
                 <div className="relative">
                   <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    className="field pl-11"
+                    className="field pl-11 pr-11 h-11 w-full text-sm"
                     onChange={(event) => setPassword(event.target.value)}
+                    onKeyDown={checkCapsLock}
+                    onKeyUp={checkCapsLock}
                     placeholder="Nhập mật khẩu"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
+                    required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              </label>
+              </div>
 
-              {error ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
+              {/* Caps Lock Caution Warning */}
+              {capsLockActive ? (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 animate-pulse">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                  <strong>Lưu ý:</strong> Caps Lock đang được bật!
                 </div>
               ) : null}
 
-              <button className="button button-primary h-12" disabled={submitting} type="submit">
-                {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+              {/* Submit Button */}
+              <button
+                className="button button-primary w-full h-11 flex items-center justify-center font-bold tracking-wider mt-2 transition-all cursor-pointer rounded-lg text-xs"
+                disabled={submitting}
+                type="submit"
+              >
+                {submitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
                 Đăng nhập
               </button>
             </form>
-
-            <div className="rounded-[24px] bg-slate-50 px-4 py-4 text-sm text-slate-600">
-              Tài khoản local mặc định: <strong>admin@warehouse.local</strong> /{" "}
-              <strong>Admin@123456</strong>
-            </div>
           </div>
         </div>
+
       </section>
     </main>
   );
