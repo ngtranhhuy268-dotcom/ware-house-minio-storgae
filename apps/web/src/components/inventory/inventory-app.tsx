@@ -97,6 +97,115 @@ function getErrorMessage(error: unknown, fallback: string) {
   return message ?? fallback;
 }
 
+function TransactionHistoryModal({
+  onClose,
+  transactions,
+  isLoading,
+}: {
+  onClose: () => void;
+  transactions: TransactionHistoryRow[];
+  isLoading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative flex flex-col w-full max-w-3xl max-h-[85vh] bg-white border border-line rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-line px-6 py-4 bg-slate-50">
+          <div className="flex items-center gap-2">
+            <Clock3 className="h-5 w-5 text-primary animate-pulse" />
+            <h2 className="text-base font-bold uppercase tracking-wider text-slate-800">
+              Lịch sử giao dịch & hoạt động
+            </h2>
+          </div>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors text-xl font-bold"
+            onClick={onClose}
+            type="button"
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {isLoading ? (
+            <LoadingInline text="Đang tải lịch sử giao dịch..." />
+          ) : transactions.length > 0 ? (
+            <div className="grid gap-3">
+              {transactions.map((transaction) => (
+                <article
+                  key={transaction.id}
+                  className="border border-line bg-[#fcfcfb] p-4 rounded-xl font-sans hover:border-slate-300 transition-colors"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`status-pill px-2.5 py-0.5 text-[9px] font-bold border rounded-full uppercase tracking-wider ${
+                            transaction.type === "IN"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : transaction.type === "OUT"
+                                ? "border-red-200 bg-red-50 text-red-700"
+                                : "border-amber-200 bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {getTransactionTypeLabel(transaction.type)}
+                        </span>
+                        <p className="font-bold text-sm text-slate-800 truncate">
+                          {transaction.itemName}
+                        </p>
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted">
+                        Kho lưu trữ: <span className="font-semibold text-slate-700">{transaction.warehouseName}</span>
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Người thực hiện: <span className="font-semibold text-slate-700">{transaction.createdBy}</span> • Thời gian: {formatDateTime(transaction.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-1 border border-line bg-white px-4 py-2 text-xs text-muted min-w-[160px] rounded-lg">
+                      <div className="flex justify-between">
+                        <span>Số lượng:</span>
+                        <strong className="text-slate-800">{formatNumber(transaction.quantity)}</strong>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-100 pt-1 mt-1">
+                        <span>Tồn sau:</span>
+                        <strong className="text-slate-800">{formatNumber(transaction.quantityAfter)}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 border border-line bg-white p-3 text-xs text-muted rounded-lg">
+                    <p className="font-bold text-slate-700 mb-1">
+                      {getTransactionNoteLabel(transaction.type)}
+                    </p>
+                    <p className="text-slate-600 leading-relaxed normal-case">{transaction.note ?? "Không có ghi chú"}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="border border-dashed border-line bg-[#fbfbf9] px-4 py-12 text-center text-xs text-muted uppercase rounded-xl">
+              Chưa ghi nhận giao dịch nào.
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end border-t border-line px-6 py-4 bg-slate-50">
+          <button
+            className="button button-ghost"
+            onClick={onClose}
+            type="button"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InventoryCard({
   row,
   canWrite,
@@ -109,7 +218,7 @@ function InventoryCard({
   onDraft: (mode: TransactionMode, row: InventoryRow) => void;
 }) {
   return (
-    <article className="panel-strong border border-line bg-surface p-4 rounded-2xl shadow-xs">
+    <article className="border border-line bg-white p-4 rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
       <div className="flex items-start gap-3">
         <button className="shrink-0" onClick={() => onOpen(row.id)} type="button">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden border border-line bg-[#fbfbf9] rounded-xl">
@@ -126,9 +235,9 @@ function InventoryCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <button className="min-w-0 text-left" onClick={() => onOpen(row.id)} type="button">
-              <p className="truncate font-sans font-bold text-foreground text-sm tracking-tight">{row.itemName}</p>
-              <p className="mt-1 text-[10px] text-muted font-mono">
-                SKU: {row.sku} // ĐVT: {row.uomName}
+              <p className="truncate font-sans font-bold text-slate-800 text-sm tracking-tight">{row.itemName}</p>
+              <p className="mt-1 text-[10px] text-muted">
+                SKU: <span className="font-semibold text-slate-700">{row.sku}</span> • ĐVT: <span className="font-semibold text-slate-700">{row.uomName}</span>
               </p>
             </button>
 
@@ -148,11 +257,11 @@ function InventoryCard({
           <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted">
             <div className="border border-line bg-[#fcfcfb] px-3 py-2 rounded-lg">
               <p className="text-[9px] font-bold uppercase tracking-widest opacity-85">TỒN HIỆN TẠI</p>
-              <p className="mt-1 text-lg font-black text-foreground leading-none font-mono">{formatNumber(row.currentQty)}</p>
+              <p className="mt-1 text-lg font-black text-slate-800 leading-none">{formatNumber(row.currentQty)}</p>
             </div>
             <div className="border border-line bg-[#fcfcfb] px-3 py-2 rounded-lg">
               <p className="text-[9px] font-bold uppercase tracking-widest opacity-85">KHO CHỨA</p>
-              <p className="mt-1 font-bold text-foreground truncate">{row.warehouseName}</p>
+              <p className="mt-1 font-bold text-slate-800 truncate leading-tight">{row.warehouseName}</p>
               <p className="text-[9px] text-muted mt-0.5">{row.unitName}</p>
             </div>
           </div>
@@ -161,12 +270,12 @@ function InventoryCard({
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#1c7ed6]">
               Ghi chú gần nhất
             </p>
-            <p className="mt-1 normal-case leading-normal">{row.latestNote ?? "Chưa ghi nhận cập nhật."}</p>
+            <p className="mt-1 normal-case leading-normal text-slate-600">{row.latestNote ?? "Chưa ghi nhận cập nhật."}</p>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2 text-[9px] uppercase tracking-wider text-muted border-t border-line/40 pt-2 font-mono">
+          <div className="mt-3 flex items-center justify-between gap-2 text-[9px] uppercase tracking-wider text-muted border-t border-line/40 pt-2 font-medium">
             <span>
-              ĐẦU: {formatNumber(row.openingQty)} // NHẬP: {formatNumber(row.totalInQty)} // XUẤT: {formatNumber(row.totalOutQty)}
+              Đầu: {formatNumber(row.openingQty)} • Nhập: {formatNumber(row.totalInQty)} • Xuất: {formatNumber(row.totalOutQty)}
             </span>
             <span>{formatDateTime(row.updatedAt)}</span>
           </div>
@@ -221,6 +330,7 @@ export function InventoryApp() {
   const [selectedId, setSelectedId] = useState("");
   const [draft, setDraft] = useState<TransactionDraft | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const deferredSearch = useDeferredValue(filters.search);
   const queryParams = useMemo(
     () => buildQueryParams(filters, deferredSearch),
@@ -397,8 +507,15 @@ export function InventoryApp() {
   return (
     <div className="grid gap-4">
       {statusMessage ? (
-        <div className="border border-line bg-[#fcfcfb] px-4 py-3 text-xs font-mono text-primary rounded-xl">
-          {`SYSTEM LOG // ${statusMessage}`}
+        <div className="border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-primary rounded-xl flex items-center justify-between gap-2 shadow-xs transition-all animate-fade-in-up">
+          <span>{statusMessage}</span>
+          <button
+            className="text-primary/70 hover:text-primary font-bold text-sm h-5 w-5 flex items-center justify-center rounded hover:bg-primary/10 transition-colors"
+            onClick={() => setStatusMessage("")}
+            type="button"
+          >
+            &times;
+          </button>
         </div>
       ) : null}
 
@@ -430,7 +547,7 @@ export function InventoryApp() {
         />
       </section>
 
-      <section className="panel-strong p-4 sm:p-5">
+      <section className="panel-strong p-4 sm:p-5 border border-line bg-surface rounded-2xl shadow-xs">
         <div className="grid gap-4">
           <div className="grid gap-3">
             <div className="relative">
@@ -448,7 +565,7 @@ export function InventoryApp() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <button
                 className="button button-ghost w-full"
                 onClick={() => setShowFilters((current) => !current)}
@@ -462,6 +579,17 @@ export function InventoryApp() {
                 <button className="button button-success w-full" onClick={() => openDraft("IN")} type="button">
                   <PackagePlus className="h-4 w-4" />
                   Nhập kho vật tư
+                </button>
+              ) : null}
+
+              {canWrite ? (
+                <button
+                  className="button button-ghost w-full"
+                  onClick={() => setShowHistoryModal(true)}
+                  type="button"
+                >
+                  <Clock3 className="h-4 w-4 text-primary" />
+                  Lịch sử hoạt động
                 </button>
               ) : null}
 
@@ -676,8 +804,8 @@ export function InventoryApp() {
                           </div>
                           <div>
                             <p className="font-bold text-foreground tracking-tight">{row.itemName}</p>
-                            <p className="text-[10px] text-muted mt-0.5 font-mono">
-                              SKU: {row.sku} // ĐVT: {row.uomName}
+                            <p className="text-[10px] text-muted mt-0.5">
+                              SKU: <span className="font-semibold text-slate-700">{row.sku}</span> • ĐVT: <span className="font-semibold text-slate-700">{row.uomName}</span>
                             </p>
                           </div>
                         </button>
@@ -686,10 +814,10 @@ export function InventoryApp() {
                         <p className="font-bold text-foreground">{row.warehouseName}</p>
                         <p className="text-[10px] text-muted mt-0.5">{row.unitName}</p>
                       </td>
-                      <td className="px-4 py-4 font-mono">
-                        <p className="text-sm font-black text-foreground">{formatNumber(row.currentQty)}</p>
-                        <p className="text-[9px] text-muted mt-0.5">
-                          ĐẦU: {formatNumber(row.openingQty)} // NHẬP: {formatNumber(row.totalInQty)} // XUẤT: {formatNumber(row.totalOutQty)}
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-extrabold text-slate-800">{formatNumber(row.currentQty)}</p>
+                        <p className="text-[9px] text-muted mt-0.5 font-medium">
+                          Đầu: {formatNumber(row.openingQty)} • Nhập: {formatNumber(row.totalInQty)} • Xuất: {formatNumber(row.totalOutQty)}
                         </p>
                       </td>
                       <td className="px-4 py-4">
@@ -744,8 +872,8 @@ export function InventoryApp() {
         </div>
 
         <div className="panel-strong flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between border border-line bg-surface font-sans rounded-2xl shadow-xs">
-          <p className="text-xs text-muted uppercase tracking-wider">
-            Tổng số dòng: <strong className="text-foreground">{pagination?.total ?? 0}</strong> // Trang: <strong className="text-foreground">{pagination?.page ?? 1}/{pagination?.totalPages ?? 1}</strong>
+          <p className="text-xs text-muted uppercase tracking-wider font-medium">
+            Tổng số dòng: <strong className="text-foreground">{pagination?.total ?? 0}</strong> • Trang: <strong className="text-foreground">{pagination?.page ?? 1}/{pagination?.totalPages ?? 1}</strong>
           </p>
           <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <select
@@ -781,57 +909,12 @@ export function InventoryApp() {
         </div>
       </section>
 
-      {canWrite ? (
-        <section className="panel-strong p-4 sm:p-5 border border-line bg-surface font-sans rounded-2xl shadow-xs">
-          <div className="mb-4 flex items-center gap-2 border-b border-line pb-3">
-            <Clock3 className="h-4 w-4 text-primary" />
-            <h2 className="text-base font-bold uppercase tracking-wider text-foreground">
-              [ HOẠT ĐỘNG / GIAO DỊCH GẦN ĐÂY HỆ THỐNG ]
-            </h2>
-          </div>
-
-          {recentTransactionsQuery.isLoading ? (
-            <LoadingInline text="Đang tải giao dịch gần đây..." />
-          ) : recentTransactions.length > 0 ? (
-            <div className="grid gap-3">
-              {recentTransactions.map((transaction) => (
-                <article key={transaction.id} className="border border-line bg-[#fcfcfb] p-4 rounded-xl font-mono">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <p className={`font-bold text-sm uppercase ${
-                        transaction.type === "IN" 
-                          ? "text-success" 
-                          : transaction.type === "OUT"
-                            ? "text-primary"
-                            : "text-warning"
-                      }`}>
-                        {getTransactionTypeLabel(transaction.type)} // VẬT TƯ: {transaction.itemName}
-                      </p>
-                      <p className="mt-1 text-[10px] text-muted">KHO: {transaction.warehouseName}</p>
-                      <p className="mt-2 text-[10px] text-muted">
-                        Thủ kho: {transaction.createdBy} // Thời gian: {formatDateTime(transaction.createdAt)}
-                      </p>
-                    </div>
-
-                    <div className="border border-line bg-surface px-4 py-2.5 text-xs text-muted uppercase tracking-wider min-w-[180px] rounded-lg">
-                      <p>SỐ LƯỢNG: <strong className="text-foreground">{formatNumber(transaction.quantity)}</strong></p>
-                      <p className="mt-1">TỒN SAU: <strong className="text-foreground">{formatNumber(transaction.quantityAfter)}</strong></p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 border border-line bg-surface p-3 text-xs text-muted rounded-lg">
-                    <p className="font-bold text-foreground">{" >>> "} {getTransactionNoteLabel(transaction.type)}</p>
-                    <p className="mt-1 normal-case leading-relaxed">{transaction.note ?? "Không có ghi chú"}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="border border-dashed border-line bg-[#fbfbf9] px-4 py-8 text-center text-xs text-muted uppercase rounded-xl">
-              Chưa ghi nhận giao dịch nào.
-            </div>
-          )}
-        </section>
+      {showHistoryModal ? (
+        <TransactionHistoryModal
+          isLoading={recentTransactionsQuery.isLoading}
+          onClose={() => setShowHistoryModal(false)}
+          transactions={recentTransactions}
+        />
       ) : null}
 
       {selectedId ? (

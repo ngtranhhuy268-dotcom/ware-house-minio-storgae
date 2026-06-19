@@ -192,6 +192,9 @@ export function TransactionModal({
                   type="number"
                   value={draft.minQty}
                 />
+                <p className="mt-1 text-[10px] text-muted normal-case leading-relaxed">
+                  Ngưỡng để hệ thống cảnh báo "Sắp hết hàng" khi tồn kho nhỏ hơn hoặc bằng số này.
+                </p>
               </label>
 
               <label className="md:col-span-2 block">

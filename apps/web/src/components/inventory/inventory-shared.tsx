@@ -11,36 +11,43 @@ export function IndicatorCard({
   value: string;
   tone: string;
 }) {
-  // Map legacy tones to soft mechanical light borders and backgrounds
-  let colorClasses = "border-line text-foreground bg-surface";
-  let labelDecorator = "Tổng quan";
+  let accentColor = "border-t-slate-500 text-slate-800";
+  let badgeText = "Tổng quan";
+  let badgeBg = "bg-slate-100 text-slate-600";
   
   if (tone.includes("emerald")) {
-    colorClasses = "border-[#c3fae8] bg-[#e6fcf5] text-[#0ca678]";
-    labelDecorator = "Đủ hàng";
+    accentColor = "border-t-emerald-500 text-emerald-700";
+    badgeText = "Đủ hàng";
+    badgeBg = "bg-emerald-500/10 text-emerald-700";
   } else if (tone.includes("amber")) {
-    colorClasses = "border-[#ffe066] bg-[#fff9db] text-[#f08c00]";
-    labelDecorator = "Sắp hết";
+    accentColor = "border-t-amber-500 text-amber-700";
+    badgeText = "Sắp hết";
+    badgeBg = "bg-amber-500/10 text-amber-700";
   } else if (tone.includes("orange")) {
-    colorClasses = "border-[#ffc9c9] bg-[#fff5f5] text-[#c92a2a]";
-    labelDecorator = "Hết hàng";
+    accentColor = "border-t-red-500 text-red-700";
+    badgeText = "Hết hàng";
+    badgeBg = "bg-red-500/10 text-red-700";
   } else if (tone.includes("slate-950")) {
-    colorClasses = "border-line text-foreground bg-[#ffffff]";
-    labelDecorator = "Vật tư";
+    accentColor = "border-t-slate-700 text-slate-900";
+    badgeText = "Tổng SKU";
+    badgeBg = "bg-slate-900/10 text-slate-700";
   } else if (tone.includes("#0f3d8c") || tone.includes("col-span-2")) {
-    colorClasses = "border-[#a5d8ff] bg-[#e7f5ff] text-[#1c7ed6]";
-    labelDecorator = "Hoạt động";
+    accentColor = "border-t-blue-500 text-blue-700";
+    badgeText = "Hoạt động";
+    badgeBg = "bg-blue-500/10 text-blue-700";
   }
   
   const isColSpan2 = tone.includes("col-span-2");
-  const outerClasses = `panel-strong border ${colorClasses} ${isColSpan2 ? "col-span-2 lg:col-span-1" : ""} rounded-2xl p-4 sm:p-5 transition-all`;
-
+  
   return (
-    <div className={outerClasses}>
-      <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 font-mono">
-        {labelDecorator} // {label}
-      </p>
-      <p className="mt-3 font-mono text-3xl font-black sm:mt-4 sm:text-4xl tracking-tight leading-none">
+    <div className={`bg-white border-t-[4px] ${accentColor} border-x border-b border-line p-5 rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${isColSpan2 ? "col-span-2 lg:col-span-1" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{label}</span>
+        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeBg}`}>
+          {badgeText}
+        </span>
+      </div>
+      <p className="mt-4 font-sans text-3xl font-extrabold tracking-tight leading-none text-slate-900">
         {value}
       </p>
     </div>
